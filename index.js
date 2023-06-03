@@ -2,7 +2,7 @@ import figlet from 'figlet';
 import { promisify } from 'util';
 
 import Core from './src/core.js';
-import PluginFOH from './plugins/foh.js';
+import PluginServer from './plugins/server.js';
 
 import db from './db.js';
 
@@ -15,7 +15,7 @@ const banner = await figletize(`${APP_NAME} v${APP_VERSION}`);
 /******** PLUGIN DEFINITION ********/
 
 const core = new Core();
-const foh = PluginFOH(db);
+const foh = PluginServer(db);
 
 /******** PLUGIN REGISTRATION ********/
 

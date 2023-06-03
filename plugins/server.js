@@ -5,6 +5,7 @@ import MKPlugin from '../src/plugin.js';
 export default function PluginFactory(db) {
   class HTTPServer extends MKPlugin {
     #core;
+    #knownIds = new Map();
 
     constructor(name = 'com.beepboop.plugin.server', version = '0.0.1') {
       super(name, version);
@@ -23,6 +24,25 @@ export default function PluginFactory(db) {
       _jsonServer.use(jsonServer.bodyParser);
       _jsonServer.use(middlewares);
 
+       /**
+       *
+       */
+      _jsonServer.post('/items', (req, res) => {
+        const item = req.body;
+
+        if (!this.#knownIds.has(item.id)) {
+          db.items.push(item);
+          this.#knownIds.set(item.id, db.items.length-1);
+          res.json(item);
+          return;
+        }
+
+        const itemLookupIndex = this.#knownIds.get(item.id);
+        
+        db.items[itemLookupIndex] = item;
+        res.json(item);
+      });
+
       /**
        *
        */
@@ -33,36 +53,7 @@ export default function PluginFactory(db) {
         });
       });
 
-      /**
-       *
-       */
-      _jsonServer.post('/orders', (req, res) => {
-        const order = {
-          id: this.#core.generateId(),
-          customerId: req.body.customerId,
-          createdDate: new Date().toISOString(),
-          status: {
-            order: 'pending',
-            payment: null,
-          },
-          items: req.body.items,
-        };
-
-        db.orders.push(order);
-        res.json({ count: 1, entries: [order] });
-      });
-
-      /**
-       *
-       */
-      _jsonServer.post('/orders/:id/payment', (req, res) => {
-        const order = db.orders.find((item) => item.id === req.params.id);
-        order.status.payment = 'authorizing';
-
-
-        res.json({ count: 1, entries: [order] });
-      });
-
+     
       _jsonServer.use(jsonRouter);
 
       _jsonServer.listen(port, () => {
