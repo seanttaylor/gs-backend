@@ -52,18 +52,31 @@ export default class CoreSystem {
 
   /**
    * Emit a registered event with data to all listeners
-   * @param {String} event
-   * @param {Any} data
+   * @param {string} event
+   * @param {any} data
+   * @param {object} meta - optional metadata to include about the event
    */
-  emit(event, data) {
+  emit(event, data, meta={}) {
     if (this.listeners[event]) {
       this.listeners[event].forEach((listener) => {
-        this.emittedEvents.push({
-          id: this.generateId(),
-          name: event,
-          timestamp: new Date().toISOString(),
-        });
-        listener(data);
+        const publishedEvent = {
+          header: {
+            meta,
+            id: this.generateId(),
+            name: event,
+            timestamp: new Date().toISOString(),
+          },
+          payload: {
+            ...data
+          }
+        };
+        
+        this.emittedEvents.push(publishedEvent);
+        try {
+          listener(publishedEvent);
+        } catch(e) {
+          console.error(`Core system encountered error while emitting event (${event}): ${e.message} `);
+        }
       });
       console.log(`Core system emitted event (${event})`);
     }

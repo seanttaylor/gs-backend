@@ -1,7 +1,14 @@
+import { randomUUID } from 'crypto';
 import jsonServer from 'json-server';
 
 import MKPlugin from '../src/plugin.js';
+import { IJsonDB } from '../interfaces/json-db.js';
 
+/**
+ * 
+ * @param {IJsonDB} db
+ * @returns 
+ */
 export default function PluginFactory(db) {
   class HTTPServer extends MKPlugin {
     #core;
@@ -16,18 +23,18 @@ export default function PluginFactory(db) {
      *
      */
     start() {
-      const port = 3000;
-      const _jsonServer = jsonServer.create();
+      const PORT = 3001;
+      const server = jsonServer.create();
       const jsonRouter = jsonServer.router(db);
       const middlewares = jsonServer.defaults();
 
-      _jsonServer.use(jsonServer.bodyParser);
-      _jsonServer.use(middlewares);
+      server.use(jsonServer.bodyParser);
+      server.use(middlewares);
 
-       /**
+      /**
        *
        */
-      _jsonServer.post('/items', (req, res) => {
+      server.post('/items', (req, res) => {
         const item = req.body;
 
         if (!this.#knownIds.has(item.id)) {
@@ -46,18 +53,33 @@ export default function PluginFactory(db) {
       /**
        *
        */
-      _jsonServer.get('/events', (req, res) => {
+      server.get('/events', (req, res) => {
         res.json({
           count: this.#core.emittedEvents.length,
           entries: this.#core.emittedEvents,
         });
       });
 
-     
-      _jsonServer.use(jsonRouter);
+      /**
+       *
+       */
+      server.post('/events', (req, res) => {
+        const { name: eventName, meta, payload } = req.body;
+        this.#core.emit(eventName, payload, meta);  
 
-      _jsonServer.listen(port, () => {
-        console.log(`App listening at http://localhost:${port}`);
+        const [ lastEmittedEvent ] = this.#core.emittedEvents.filter((event)=> event.header.name === eventName).reverse();
+
+        res.status(201);
+        res.json({
+          ...lastEmittedEvent.header, 
+          requestId: randomUUID() 
+        });
+      });
+     
+      server.use(jsonRouter);
+
+      server.listen(PORT, () => {
+        console.log(`App listening at http://localhost:${PORT}`);
       });
 
       return {
